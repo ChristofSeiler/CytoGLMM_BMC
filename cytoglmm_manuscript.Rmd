@@ -414,9 +414,9 @@ Not applicable
 
 All data analysed during this study are included in @aghaeepour2017immune.
 
-All figures can be reproduced by compiling the manuscript _Rmd_ available on GitHub:
+All results and figures can be reproduced by running the manuscript _Rmd_ available on GitHub:
 
-* https://christofseiler.github.io/CytoGLMM_BMC/
+* https://github.com/christofseiler/CytoGLMM_BMC/
 
 ## Competing Interests {-#competing}
 

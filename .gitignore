@@ -2,9 +2,6 @@
 .Rhistory
 .Rapp.history
 
-# Session Data files
-.RData
-
 # User-specific files
 .Ruserdata
 
@@ -34,3 +31,5 @@ vignettes/*.pdf
 # Temporary files created by R markdown
 *.utf8.md
 *.knit.md
+cytoglmm_manuscript.pdf
+cytoglmm_manuscript_files/figure-latex/
