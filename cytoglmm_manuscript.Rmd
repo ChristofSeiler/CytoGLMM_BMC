@@ -17,6 +17,8 @@ abstract: |
   **Background:** Flow and mass cytometry are important modern immunology tools for measuring expression levels of multiple proteins on single cells. The goal is to better understand the mechanisms of responses on a single cell basis by studying differential expression of proteins. We focus on cell-specific differential analysis and one fixed cell type. In contrast, most current methods learn cell types and perform differential analysis jointly. Our narrower field of application allows us to define a more specific statistical model with easier to control statistical guarantees. **Results:** Differential analysis of marker expressions can be difficult due to marker correlations and inter-individual heterogeneity, particularly for studies of human immunology. We address these challenges with two multiple regression strategies: A bootstrapped generalized linear model and a generalized linear mixed model. On simulated datasets, we compare the robustness towards marker correlations and heterogeneity of both strategies. For paired experiments, we find that both strategies maintain the target false discovery rate under medium correlations and that mixed models are statistically more powerful under the correct model specification. For unpaired experiments, our results indicate that much larger patient sample sizes are required to detect differences. We illustrate the `CytoGLMM` _R_ package and workflow for both strategies on a pregnancy dataset. **Conclusions:** Our approach to find differential proteins in flow and mass cytometry data reduces biases arising from maker correlations and safeguards against false discoveries induced by patient heterogeneity.
 ---
 
+**Keywords:** High-Dimensional Cytometry, Generalized Linear Models, Generalized Linear Mixed Models
+
 ```{r load_packages, echo=FALSE, warning=FALSE, message=FALSE}
 library("CytoGLMM")
 library("tidyverse")
@@ -424,7 +426,7 @@ The authors declare that they have no competing interests.
 
 ## Funding {-#funding}
 
-This work was supported by the National Institutes of Health [U01AI131302 to CAB and SH, R56AI124788 to CAB and SH, R21AI130523 to CAB. and SH, DP1DA046089 to CAB, R21AI130532 to CAB, R01AI133698 to CAB, R21AI135287 to CAB, 5T32AI007290-29 to LMK, TL1TR001084 to EV, T32AI007502 to EV, 1F32AI126674 to LJS]; an A.P. Giannini fellowship [to LMK]; and a Stanford Child Health Research Institute postdoctoral fellowship [to MLG]. CAB is the Tashia and John Morgridge Endowed Faculty Scholar in Pediatric Translational Medicine from the Maternal Child Health Research Institute, and a Chan Zuckerberg Investigator.
+This work was supported by the National Institutes of Health [U01AI131302 to CAB and SH, R56AI124788 to CAB and SH, R21AI130523 to CAB and SH, DP1DA046089 to CAB, R21AI130532 to CAB, R01AI133698 to CAB, R21AI135287 to CAB, 5T32AI007290-29 to LMK, TL1TR001084 to EV, T32AI007502 to EV, 1F32AI126674 to LJS]; an A.P. Giannini fellowship [to LMK]; and a Stanford Child Health Research Institute postdoctoral fellowship [to MLG]. CAB is the Tashia and John Morgridge Endowed Faculty Scholar in Pediatric Translational Medicine from the Maternal Child Health Research Institute, and a Chan Zuckerberg Investigator.
 
 ## Authors' Contributions {-#authors}
 
