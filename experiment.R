@@ -115,61 +115,6 @@ experiment = function(seed = 1,                 # random seed
                                 group = "donor",
                                 num_cores = 1)
   
-  # regression calibration
-  n = 2*n_donors
-  k = n_cells
-  df_splits = df %>% group_by(donor, condition) %>% group_split()
-  Ws = lapply(df_splits, function(df) dplyr::select(df, protein_names))
-  Sigma_w = lapply(Ws, function(W) cov(W)) %>% simplify2array()
-  Sigma_uu = apply(Sigma_w, c(1,2), sum)/n
-  Wbar = lapply(Ws, function(W) colMeans(W)) %>% simplify2array() %>% t()
-  Sigma_wbar = cov(Wbar)
-  mu_x = mu_w = colMeans(Wbar)
-  X = apply(Wbar, 1, function(wbar) {
-    mu_x + (Sigma_wbar - Sigma_uu) %*% ginv(Sigma_wbar) %*% (wbar - mu_w)
-  }) %>% t
-  colnames(X) = protein_names
-  df_info = df %>% group_by(donor, condition) %>% tally()
-  df_x = bind_cols(df_info, as_tibble(X))
-  
-  # permutation mixel model
-  n_perm = 1000
-  glm_wrap = function(df) {
-    df %<>% mutate(y = ifelse(condition == "control", 0, 1))
-    formula_str = paste("y ~", paste(protein_names, collapse = " + "))
-    glm(formula_str, family = "binomial", data = df)
-  }
-  cytopermute = function() {
-    glm_permute = function(i) {
-      df_x$condition %<>% sample()
-      glm_fit = glm_wrap(df_x)
-      tibble(protein_name = protein_names,
-             coef = glm_fit$coefficients[protein_names],
-             perm = i)
-    }
-    tb_coef = lapply(1:n_perm, glm_permute) %>% bind_rows()
-    tb_coef %<>% pivot_wider(names_from = protein_name, values_from = coef)
-    glm_fit = glm_wrap(df_x)
-    out = NULL
-    out$tb_coef = tb_coef
-    out$glm_fit = glm_fit
-    class(out) = "cytopermute"
-    out
-  }
-  summary.cytopermute = function(fit, method = "BH") {
-    coef_obsv = fit$glm_fit$coefficients[protein_names]
-    pvalues_unadj = sapply(protein_names, function(x) {
-      (sum(abs(fit$tb_coef[x]) > abs(coef_obsv[x])) + 1) / (nrow(fit$tb_coef) + 1)
-    })
-    df_pvalues = tibble(protein_name = protein_names, 
-                        pvalues_unadj = pvalues_unadj)
-    df_pvalues %<>% mutate(pvalues_adj = p.adjust(pvalues_unadj,
-                                                  method = method))
-    df_pvalues = df_pvalues[order(df_pvalues$pvalues_unadj),]
-    df_pvalues
-  }
-  glm_fit_perm = cytopermute()
-  
   # bootstrap
   glm_fit = CytoGLMM::cytoglm(df,
                               num_boot = 1000,
@@ -178,24 +123,59 @@ experiment = function(seed = 1,                 # random seed
                               condition = "condition", 
                               group = "donor")
   
-  # # GLM on median markers
-  # df_median = df %>% 
-  #   group_by(donor, condition) %>% 
-  #   summarize_at(protein_names, median)
-  # df_tally  = df %>% 
-  #   group_by(donor, condition) %>%
-  #   tally()
-  # df_median %<>% add_column(n = df_tally$n)
-  # # select some proteins
-  # foci_select = foci(Y = as.numeric(df_median$condition), 
-  #                    X = df_median[,protein_names], 
-  #                    num_features = round(nrow(df_median)/2), 
-  #                    stop = FALSE, numCores = 1)
-  # protein_selected = foci_select$selectedVar$names
-  # formula_str = paste("condition ~", paste(protein_selected, collapse = " + "))
-  # glm_median_fit = glm(formula = formula_str, family = binomial(), data = df_median, 
-  #                      weights = df_median$n)
-  
+  # Citrus
+  compute_stats_citrus = function() {
+    
+    # fit lasso on median marker expressions
+    df_median = df %>%
+      group_by(donor, condition) %>%
+      summarise_at(protein_names, median)
+    X = as.matrix(df_median[,protein_names])
+    cond = as.numeric(df_median$condition)-1
+    cv_fits = cv.glmnet(x = X, y = cond, family = "binomial", nfolds = nrow(X))
+    
+    # # selet the model with fdr
+    # # define lambda sequence
+    # lambda_sequence = 10^seq(-5, 1, 0.05)
+    # cv_fits = cv.glmnet(x = X, y = cond, family = "binomial", lambda = lambda_sequence, nfolds = nrow(X))
+    # # workaround for bug in glmnet
+    # perms = 100
+    # zeros = list()
+    # for(i in 1:perms) {
+    #   tryCatch(
+    #     error = function(cnd) {
+    #       paste0("--", conditionMessage(cnd), "--")
+    #     },
+    #     zeros[[i]] <- cv.glmnet(x = X, y = sample(cond), family = "binomial", lambda = lambda_sequence, nfolds = nrow(X))$nzero
+    #   )
+    # }
+    # zeros %<>% bind_rows()
+    # median_zeros = apply(zeros, MARGIN = 2, function(x) median(x, na.rm = TRUE))
+    # fdr_hat = median_zeros/cv_fits$nzero
+    # model_id = which.max(fdr_hat < fdr)
+    
+    # calculate stats
+    non_null = protein_names[1:n_true]
+    null = protein_names[(n_true+1):n_markers]
+    tb = tibble(protein_name = protein_names, beta = 0)
+    # if(cv_fits$nzero[model_id] > 0) {
+    #   fit = glmnet(x = X, y = cond, family = "binomial", lambda = cv_fits$lambda[model_id])
+    #   tb %<>% mutate(beta = as.numeric(fit$beta))
+    # }
+    fit = glmnet(x = X, y = cond, family = "binomial", lambda = cv_fits$lambda.min)
+    tb %<>% mutate(beta = as.numeric(fit$beta))
+    tb %<>% mutate(discovery = ifelse(beta != 0, TRUE, FALSE))
+    a = tb %>% filter(protein_name %in% null & discovery) %>% nrow
+    R = tb %>% filter(discovery) %>% nrow
+    fdp = 0
+    if(R > 0) fdp = a/R
+    b = tb %>% filter(protein_name %in% non_null & discovery) %>% nrow
+    N1 = n_true
+    power = b/N1
+    list(fdp = fdp, power = power)
+    
+  }
+
   # return a table with one row per method
   tb_info = tibble(
     seed, n_markers, n_true, bias, n_samples, paired, n_cells, pi, 
@@ -204,10 +184,9 @@ experiment = function(seed = 1,                 # random seed
   bind_rows(
     bind_cols(tb_info, method = "GLMM-BH", compute_stats(glmm_fit, method = "BH")),
     bind_cols(tb_info, method = "GLMM-BY", compute_stats(glmm_fit, method = "BY")),
-    bind_cols(tb_info, method = "GLM-PERM-BH", compute_stats( glm_fit_perm, method = "BH")),
-    bind_cols(tb_info, method = "GLM-PERM-BY", compute_stats( glm_fit_perm, method = "BY")),
     bind_cols(tb_info, method = "GLM-BH", compute_stats( glm_fit, method = "BH")),
-    bind_cols(tb_info, method = "GLM-BY", compute_stats( glm_fit, method = "BY"))
+    bind_cols(tb_info, method = "GLM-BY", compute_stats( glm_fit, method = "BY")),
+    bind_cols(tb_info, method = "Citrus", compute_stats_citrus())
   )
   
 }
