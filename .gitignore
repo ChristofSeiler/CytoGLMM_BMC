@@ -33,3 +33,4 @@ vignettes/*.pdf
 *.knit.md
 cytoglmm_manuscript.pdf
 cytoglmm_manuscript_files/figure-latex/
+.DS_Store
