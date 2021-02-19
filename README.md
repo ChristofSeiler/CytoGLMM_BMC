@@ -6,7 +6,7 @@ To reproduce all results and plots knit the manuscript Rmd file:
 
 Simulation results are precomputed and stored here:
 
-* [tb_experiment_n_sample.csv](tb_experiment_n_sample.csv)
+* [tb_experiment_n_sample_citrus_lambda_min.csv](tb_experiment_n_sample_citrus_lambda_min.csv)
 * [tb_experiment_paired_unpaired.csv](tb_experiment_paired_unpaired.csv)
 
 The pregnancy data is prepared here:
